@@ -1,5 +1,7 @@
 # tdc
 
+[![Circle CI](https://img.shields.io/circleci/project/crackcomm/tdc.svg)](https://circleci.com/gh/crackcomm/tdc)
+
 ```sh
 $ go install github.com/crackcomm/tdc
 $ tdc --help
