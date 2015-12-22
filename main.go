@@ -94,14 +94,16 @@ func main() {
 			go func() {
 				defer wg.Done()
 				for req := range files {
+					dest, _ := filepath.Abs(req.dest)
+					file, _ := filepath.Abs(req.file)
 					if req.mkdir {
-						log.Printf("[mkdir] %s", req.dest)
+						log.Printf("[mkdir] %s", dest)
 						if err := os.MkdirAll(req.dest, os.ModePerm); err != nil {
 							log.Fatalf("[mkdir] error: %v", err)
 						}
 						continue
 					}
-					log.Printf("[template] %q => %q", req.file, req.dest)
+					log.Printf("[template] %q => %q", file, dest)
 					tmpl, err := template.ParseFiles(req.file)
 					if err != nil {
 						log.Fatalf("[template] read error: %v", err)
