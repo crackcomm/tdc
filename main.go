@@ -78,8 +78,6 @@ func main() {
 			log.Fatalf("[env] error parsing environment: %v", err)
 		}
 
-		log.Printf("%#v", env)
-
 		data := make(map[string]string)
 		prefix := c.String("prefix")
 
