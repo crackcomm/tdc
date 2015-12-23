@@ -96,12 +96,8 @@ func main() {
 				for req := range files {
 					dest, _ := filepath.Abs(req.dest)
 					file, _ := filepath.Abs(req.file)
-					if req.mkdir {
-						log.Printf("[mkdir] %s", dest)
-						if err := os.MkdirAll(req.dest, os.ModePerm); err != nil {
-							log.Fatalf("[mkdir] error: %v", err)
-						}
-						continue
+					if err := os.MkdirAll(filepath.Dir(dest), os.ModePerm); err != nil {
+						log.Fatalf("[mkdir] error: %v", err)
 					}
 					log.Printf("[template] %q => %q", file, dest)
 					tmpl, err := template.ParseFiles(req.file)
@@ -125,16 +121,10 @@ func main() {
 		processed := make(map[string]bool)
 		for _, input := range c.StringSlice("input") {
 			filepath.Walk(input, func(path string, info os.FileInfo, err error) error {
-				if processed[path] == true {
+				if info.IsDir() || processed[path] == true {
 					return nil
 				}
 				processed[path] = true
-
-				if info.IsDir() {
-					dest := filepath.Join(c.String("output"), strings.TrimPrefix(path, input))
-					files <- &inputFile{dest: dest, mkdir: true}
-					return nil
-				}
 
 				for _, globPath := range c.StringSlice("just-copy") {
 					if glob.Glob(globPath, path) {
@@ -166,8 +156,8 @@ func main() {
 }
 
 type inputFile struct {
-	file, dest      string
-	justCopy, mkdir bool
+	file, dest string
+	justCopy   bool
 }
 
 func listToMap(list []string) (result map[string]string, err error) {
