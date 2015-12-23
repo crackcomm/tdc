@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -22,7 +23,8 @@ func init() {
 func main() {
 	app := cli.NewApp()
 	app.Name = "tdc"
-	app.Version = "0.0.1"
+	app.Version = ""
+	app.HideVersion = true
 	app.Usage = `Templates Directory Compiler. Compiles directory of Go style templates.
 
    It will read all files in directory in directory unless path specified in --just-copy flag.
@@ -56,6 +58,10 @@ func main() {
 			Name:  "concurrency",
 			Value: 100,
 		},
+		cli.BoolFlag{
+			Name:  "v",
+			Usage: "verbose",
+		},
 	}
 	app.Before = func(c *cli.Context) error {
 		var errs []string
@@ -72,6 +78,10 @@ func main() {
 	}
 	app.Action = func(c *cli.Context) {
 		files := make(chan *inputFile, 10000)
+
+		if !c.Bool("v") {
+			log.SetOutput(ioutil.Discard)
+		}
 
 		env, err := listToMap(os.Environ())
 		if err != nil {
