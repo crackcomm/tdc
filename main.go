@@ -29,7 +29,6 @@ func main() {
 
    It will read all files in directory in directory unless path specified in --just-copy flag.
    All environment variables with prefix (flag: --prefix) will be applied to templates.`
-	app.ArgsUsage = "<templates_dir>"
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "output",
