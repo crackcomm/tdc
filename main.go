@@ -33,26 +33,26 @@ func main() {
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "output",
-			Usage: "Output destination (at least one is required)",
+			Usage: "output destination (at least one is required)",
 		},
 		cli.StringSliceFlag{
 			Name:  "input",
-			Usage: "Input path (at least one is required)",
+			Usage: "input path (at least one is required)",
 		},
 		cli.StringSliceFlag{
 			Name:  "just-copy",
-			Usage: "Doesnt compiles templates in specified path, just copies them; accepts glob-like wildcards",
+			Usage: "doesnt compile templates in specified path, just copies them; accepts glob-like wildcards",
 		},
 		cli.StringFlag{
 			Name:  "prefix",
+			Usage: "environment keys prefix",
 			Value: "TDC_",
-			Usage: "Values environment prefix",
 		},
 		cli.GenericFlag{
 			Name:   "size-limit",
+			EnvVar: "TDC_FILE_SIZE_LIMIT",
 			Usage:  "template size limit",
 			Value:  cliutils.Megabytes{Value: 1},
-			EnvVar: "TDC_FILE_SIZE_LIMIT",
 		},
 		cli.IntFlag{
 			Name:  "concurrency",
