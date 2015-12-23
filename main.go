@@ -41,7 +41,7 @@ func main() {
 		},
 		cli.StringSliceFlag{
 			Name:  "just-copy",
-			Usage: "doesnt compile templates in specified path, just copies them; accepts glob-like wildcards",
+			Usage: "wildcard path for files to just copy",
 		},
 		cli.StringFlag{
 			Name:  "prefix",
