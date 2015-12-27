@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -108,6 +109,14 @@ func main() {
 					if err := os.MkdirAll(filepath.Dir(dest), os.ModePerm); err != nil {
 						log.Fatalf("[mkdir] error: %v", err)
 					}
+					if req.justCopy {
+						log.Printf("[copy] %q => %q", file, dest)
+						err := copyFile(file, dest)
+						if err != nil {
+							log.Fatalf("[copy] error: %v", err)
+						}
+						return
+					}
 					log.Printf("[template] %q => %q", file, dest)
 					tmpl, err := template.ParseFiles(req.file)
 					if err != nil {
@@ -180,5 +189,20 @@ func listToMap(list []string) (result map[string]string, err error) {
 		value := keyValue[i+1:]
 		result[key] = value
 	}
+	return
+}
+
+func copyFile(src, dest string) (err error) {
+	r, err := os.Open(src)
+	if err != nil {
+		return
+	}
+	defer r.Close()
+	w, err := os.Create(dest)
+	if err != nil {
+		return
+	}
+	defer w.Close()
+	_, err = io.Copy(w, r)
 	return
 }
