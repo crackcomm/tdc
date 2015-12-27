@@ -59,7 +59,7 @@ func main() {
 			Value: 100,
 		},
 		cli.BoolFlag{
-			Name:  "v",
+			Name:  "verbose, v",
 			Usage: "verbose",
 		},
 	}
