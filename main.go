@@ -43,6 +43,10 @@ func main() {
 			Name:  "just-copy",
 			Usage: "wildcard path for files to just copy",
 		},
+		cli.StringSliceFlag{
+			Name:  "ignore-ext",
+			Usage: "extensions to ignore",
+		},
 		cli.StringFlag{
 			Name:  "prefix",
 			Usage: "environment keys prefix",
@@ -86,6 +90,11 @@ func main() {
 		env, err := listToMap(os.Environ())
 		if err != nil {
 			log.Fatalf("[env] error parsing environment: %v", err)
+		}
+
+		ignoreExts := c.StringSlice("ignore-ext")
+		for i, ext := range ignoreExts {
+			ignoreExts[i] = fmt.Sprintf(".%s", strings.Trim(ext, "."))
 		}
 
 		data := make(map[string]string)
@@ -143,6 +152,11 @@ func main() {
 					return nil
 				}
 				processed[path] = true
+
+				if stringIn(filepath.Ext(path), ignoreExts) {
+					log.Printf("[ext] ignoring: %q", path)
+					return nil
+				}
 
 				for _, globPath := range c.StringSlice("just-copy") {
 					if glob.Glob(globPath, path) {
@@ -205,4 +219,13 @@ func copyFile(src, dest string) (err error) {
 	defer w.Close()
 	_, err = io.Copy(w, r)
 	return
+}
+
+func stringIn(str string, list []string) bool {
+	for _, v := range list {
+		if v == str {
+			return true
+		}
+	}
+	return false
 }
