@@ -148,8 +148,8 @@ func main() {
 		processed := make(map[string]bool)
 		for _, input := range c.StringSlice("input") {
 			filepath.Walk(input, func(path string, info os.FileInfo, err error) error {
-				if info.IsDir() || processed[path] == true {
-					return nil
+				if err != nil || info.IsDir() || processed[path] == true {
+					return err
 				}
 				processed[path] = true
 
