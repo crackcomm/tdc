@@ -9,6 +9,10 @@ tdc-build:
 install:
 	go install github.com/crackcomm/tdc
 
+docs: install
+	sh -c 'TDC_HELP=`tdc --help` \
+		tdc --input README.md.tmpl --output README.md'
+
 dist: tdc-build
 
 clean:
