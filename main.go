@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,6 +42,10 @@ func main() {
 		cli.StringSliceFlag{
 			Name:  "just-copy",
 			Usage: "wildcard path for files to just copy",
+		},
+		cli.StringSliceFlag{
+			Name:  "json-file",
+			Usage: "json file containing variables",
 		},
 		cli.StringSliceFlag{
 			Name:  "ignore-ext",
@@ -96,6 +102,14 @@ func main() {
 			data:  data,
 		}
 
+		// Set extra data from --json-file flag
+		for _, filename := range c.StringSlice("json-file") {
+			if err := cr.setExtraDataFromFile(filename); err != nil {
+				glog.Fatal(err)
+			}
+		}
+
+		// Start --concurrency workers for compilation
 		var wg sync.WaitGroup
 		for i := 0; i < c.Int("concurrency"); i++ {
 			wg.Add(1)
@@ -218,6 +232,26 @@ func (cr *compilerRuntime) handleFile(file *inputFile) (err error) {
 	// Execute the template with given data into the file
 	glog.Infof("[template] %q => %q", fname, dest)
 	return tmpl.Execute(out, cr.data)
+}
+
+func (cr *compilerRuntime) setExtraData(extra map[string]interface{}) {
+	for key, value := range extra {
+		cr.data[key] = value
+	}
+}
+
+func (cr *compilerRuntime) setExtraDataFromFile(filename string) (err error) {
+	body, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return
+	}
+	data := make(map[string]interface{})
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		return
+	}
+	cr.setExtraData(data)
+	return
 }
 
 func getEnvData(prefix string) (data map[string]interface{}, err error) {
