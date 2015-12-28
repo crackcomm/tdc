@@ -2,10 +2,9 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,15 +12,15 @@ import (
 	"text/template"
 
 	"github.com/codegangsta/cli"
+	"github.com/golang/glog"
 	"github.com/ryanuber/go-glob"
 	"github.com/tower-services/utils/cliutils"
 )
 
-func init() {
-	log.SetFlags(0)
-}
-
 func main() {
+	defer glog.Flush()
+	flag.CommandLine.Parse([]string{"-logtostderr=false"})
+
 	app := cli.NewApp()
 	app.Name = "tdc"
 	app.Version = ""
@@ -81,30 +80,29 @@ func main() {
 		return nil
 	}
 	app.Action = func(c *cli.Context) {
-		files := make(chan *inputFile, 10000)
-
-		if !c.Bool("v") {
-			log.SetOutput(ioutil.Discard)
+		// Disable log outut if --verbose flag is on
+		if c.Bool("v") {
+			flag.Set("logtostderr", "true")
 		}
 
-		env, err := listToMap(os.Environ())
-		if err != nil {
-			log.Fatalf("[env] error parsing environment: %v", err)
-		}
-
+		// Get --ignore-ext list and make sure they are prefixed with a dot
 		ignoreExts := c.StringSlice("ignore-ext")
 		for i, ext := range ignoreExts {
-			ignoreExts[i] = fmt.Sprintf(".%s", strings.Trim(ext, "."))
+			if !strings.HasPrefix(ext, ".") {
+				ignoreExts[i] = fmt.Sprintf(".%s", ext)
+			}
 		}
 
-		data := make(map[string]string)
-		prefix := c.String("prefix")
+		// Get template data from environment variables with specified prefix
+		data, err := getEnvData(c.String("prefix"))
+		if err != nil {
+			glog.Fatal(err)
+		}
 
-		for key, value := range env {
-			if strings.HasPrefix(key, prefix) {
-				key = strings.TrimPrefix(key, prefix)
-				data[key] = value
-			}
+		// Compiler runtime compiles the templates
+		cr := &compilerRuntime{
+			files: make(chan *inputFile, 10000),
+			data:  data,
 		}
 
 		var wg sync.WaitGroup
@@ -112,84 +110,142 @@ func main() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				for req := range files {
-					dest, _ := filepath.Abs(req.dest)
-					file, _ := filepath.Abs(req.file)
-					if err := os.MkdirAll(filepath.Dir(dest), os.ModePerm); err != nil {
-						log.Fatalf("[mkdir] error: %v", err)
-					}
-					if req.justCopy {
-						log.Printf("[copy] %q => %q", file, dest)
-						err := copyFile(file, dest)
-						if err != nil {
-							log.Fatalf("[copy] error: %v", err)
-						}
-						return
-					}
-					log.Printf("[template] %q => %q", file, dest)
-					tmpl, err := template.ParseFiles(req.file)
-					if err != nil {
-						log.Fatalf("[template] read error: %v", err)
-					}
-					out, err := os.Create(req.dest)
-					if err != nil {
-						log.Fatalf("[file] create error: %v", err)
-					}
-					if err := tmpl.Execute(out, data); err != nil {
-						log.Fatalf("[template] execute error: %v", err)
-					}
-					if err := out.Close(); err != nil {
-						log.Fatalf("[file] close error: %v", err)
-					}
+				if err := cr.consumeFiles(); err != nil {
+					glog.Fatal(err)
 				}
 			}()
 		}
 
+		// Map of processed files
 		processed := make(map[string]bool)
+
+		// Visit all --input directories
 		for _, input := range c.StringSlice("input") {
 			filepath.Walk(input, func(path string, info os.FileInfo, err error) error {
-				if err != nil || info.IsDir() || processed[path] == true {
+				// Ignore if it's directory or already processed
+				if info.IsDir() || processed[path] == true {
+					return nil
+				}
+
+				// Return error if not empty
+				if err != nil {
 					return err
 				}
+
+				// Add to map of processed files
 				processed[path] = true
 
+				// Ignore the file if extension is in --ignore-ext
 				if stringIn(filepath.Ext(path), ignoreExts) {
-					log.Printf("[ext] ignoring: %q", path)
+					glog.Infof("[ext] ignoring: %q", path)
 					return nil
 				}
 
+				// Ignore if the file size is bigger than --size-limit (default: 1 megabyte)
+				if limit, ok := c.Generic("size-limit").(*cliutils.Megabytes); ok && uint64(info.Size()) > limit.Value {
+					glog.Infof("not copying %q: too big", path)
+					return nil
+				}
+
+				// The file with template or to copy
+				file := &inputFile{
+					file: path,
+					dest: filepath.Join(c.String("output"), strings.TrimPrefix(path, input)),
+				}
+
+				// If filename matches path given in --just-copy, set justCopy to true
 				for _, globPath := range c.StringSlice("just-copy") {
 					if glob.Glob(globPath, path) {
-						dest := filepath.Join(c.String("output"), strings.TrimPrefix(path, input))
-						files <- &inputFile{file: path, dest: dest, justCopy: true}
-						return nil
+						file.justCopy = true
 					}
 				}
-				if limit, ok := c.Generic("size-limit").(*cliutils.Megabytes); ok && uint64(info.Size()) > limit.Value {
-					log.Printf("Too big: %s", path)
-					return nil
-				}
 
-				dest := filepath.Join(c.String("output"), strings.TrimPrefix(path, input))
-				files <- &inputFile{file: path, dest: dest}
+				cr.files <- file
 				return nil
 			})
 		}
 
-		close(files)
+		close(cr.files)
 
 		wg.Wait()
-		log.Println("done")
+		glog.Info("done")
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		log.Fatal(err)
+		glog.Fatal(err)
 	}
+}
+
+type compilerRuntime struct {
+	data  map[string]interface{}
+	files chan *inputFile
 }
 
 type inputFile struct {
 	file, dest string
 	justCopy   bool
+}
+
+func (cr *compilerRuntime) consumeFiles() (err error) {
+	for file := range cr.files {
+		err = cr.handleFile(file)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func (cr *compilerRuntime) handleFile(file *inputFile) (err error) {
+	dest, _ := filepath.Abs(file.dest)
+	fname, _ := filepath.Abs(file.file)
+
+	// Make sure output directory exists
+	if err := os.MkdirAll(filepath.Dir(dest), os.ModePerm); err != nil {
+		return err
+	}
+
+	// Copy the file if --just-copy flag was enabled on this path
+	if file.justCopy {
+		glog.Infof("[copy] %q => %q", fname, dest)
+		return copyFile(fname, dest)
+	}
+
+	// Parse the template
+	tmpl, err := template.ParseFiles(file.file)
+	if err != nil {
+		return
+	}
+
+	// Create output file
+	out, err := os.Create(file.dest)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	// Execute the template with given data into the file
+	glog.Infof("[template] %q => %q", fname, dest)
+	return tmpl.Execute(out, cr.data)
+}
+
+func getEnvData(prefix string) (data map[string]interface{}, err error) {
+	data = make(map[string]interface{})
+
+	// Get map of environment variables
+	env, err := listToMap(os.Environ())
+	if err != nil {
+		return
+	}
+
+	// Extract only values with specified prefix
+	for key, value := range env {
+		if strings.HasPrefix(key, prefix) {
+			key = strings.TrimPrefix(key, prefix)
+			data[key] = value
+		}
+	}
+	return
 }
 
 func listToMap(list []string) (result map[string]string, err error) {

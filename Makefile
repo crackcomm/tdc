@@ -11,7 +11,7 @@ install:
 
 docs: install
 	sh -c 'TDC_HELP=`tdc --help` \
-		tdc --input README.md.tmpl --output README.md'
+		tdc --input README.md.tmpl --output README.md --verbose'
 
 dist: tdc-build
 
