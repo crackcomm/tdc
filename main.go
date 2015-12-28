@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -66,20 +65,12 @@ func main() {
 			Usage: "verbose",
 		},
 	}
-	app.Before = func(c *cli.Context) error {
-		var errs []string
-		if len(c.String("output")) == 0 {
-			errs = append(errs, "Flag --output is required.")
-		}
-		if len(c.StringSlice("input")) == 0 {
-			errs = append(errs, "At least one --input flag is required.")
-		}
-		if len(errs) != 0 {
-			return errors.New(strings.Join(errs, "\n"))
-		}
-		return nil
-	}
 	app.Action = func(c *cli.Context) {
+		if c.String("output") == "" || len(c.StringSlice("input")) == 0 {
+			cli.ShowAppHelp(c)
+			return
+		}
+
 		// Disable log outut if --verbose flag is on
 		if c.Bool("v") {
 			flag.Set("logtostderr", "true")
