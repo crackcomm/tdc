@@ -21,6 +21,7 @@ GLOBAL OPTIONS:
    --output 							output destination (at least one is required)
    --input [--input option --input option]			input path (at least one is required)
    --just-copy [--just-copy option --just-copy option]		wildcard path for files to just copy
+   --json-file [--json-file option --json-file option]		json file containing variables
    --ignore-ext [--ignore-ext option --ignore-ext option]	extensions to ignore
    --prefix "TDC_"						environment keys prefix
    --size-limit "1M"						template size limit [$TDC_FILE_SIZE_LIMIT]
