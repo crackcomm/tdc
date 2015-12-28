@@ -20,7 +20,7 @@ import (
 
 func main() {
 	defer glog.Flush()
-	flag.CommandLine.Parse([]string{"-logtostderr=false"})
+	flag.CommandLine.Parse([]string{"-logtostderr"})
 
 	app := cli.NewApp()
 	app.Name = "tdc"
@@ -79,7 +79,7 @@ func main() {
 
 		// Disable log outut if --verbose flag is on
 		if c.Bool("v") {
-			flag.Set("logtostderr", "true")
+			flag.Set("v", "1")
 		}
 
 		// Get --ignore-ext list and make sure they are prefixed with a dot
@@ -142,13 +142,13 @@ func main() {
 
 				// Ignore the file if extension is in --ignore-ext
 				if stringIn(filepath.Ext(path), ignoreExts) {
-					glog.Infof("[ext] ignoring: %q", path)
+					glog.V(1).Infof("[ext] ignoring: %q", path)
 					return nil
 				}
 
 				// Ignore if the file size is bigger than --size-limit (default: 1 megabyte)
 				if limit, ok := c.Generic("size-limit").(*cliutils.Megabytes); ok && uint64(info.Size()) > limit.Value {
-					glog.Infof("not copying %q: too big", path)
+					glog.V(1).Infof("not copying %q: too big", path)
 					return nil
 				}
 
@@ -169,11 +169,8 @@ func main() {
 				return nil
 			})
 		}
-
 		close(cr.files)
-
 		wg.Wait()
-		glog.Info("done")
 	}
 
 	if err := app.Run(os.Args); err != nil {
@@ -212,7 +209,7 @@ func (cr *compilerRuntime) handleFile(file *inputFile) (err error) {
 
 	// Copy the file if --just-copy flag was enabled on this path
 	if file.justCopy {
-		glog.Infof("[copy] %q => %q", fname, dest)
+		glog.V(1).Infof("[copy] %q => %q", fname, dest)
 		return copyFile(fname, dest)
 	}
 
@@ -230,7 +227,7 @@ func (cr *compilerRuntime) handleFile(file *inputFile) (err error) {
 	defer out.Close()
 
 	// Execute the template with given data into the file
-	glog.Infof("[template] %q => %q", fname, dest)
+	glog.V(1).Infof("[template] %q => %q", fname, dest)
 	return tmpl.Execute(out, cr.data)
 }
 
