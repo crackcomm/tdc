@@ -128,7 +128,7 @@ func main() {
 		for _, input := range c.StringSlice("input") {
 			filepath.Walk(input, func(path string, info os.FileInfo, err error) error {
 				// Ignore if it's directory or already processed
-				if info.IsDir() || processed[path] == true {
+				if (info != nil && info.IsDir()) || processed[path] == true {
 					return nil
 				}
 
