@@ -60,7 +60,7 @@ func main() {
 			Name:   "size-limit",
 			EnvVar: "TDC_FILE_SIZE_LIMIT",
 			Usage:  "template size limit",
-			Value:  cliutils.Megabytes{Value: 1},
+			Value:  &cliutils.Megabytes{Value: 1},
 		},
 		cli.IntFlag{
 			Name:  "concurrency",
@@ -147,7 +147,7 @@ func main() {
 				}
 
 				// Ignore if the file size is bigger than --size-limit (default: 1 megabyte)
-				if limit, ok := c.Generic("size-limit").(*cliutils.Megabytes); ok && uint64(info.Size()) > limit.Value {
+				if limit, ok := c.Generic("size-limit").(*cliutils.Megabytes); ok && uint64(info.Size()) > limit.Bytes() {
 					glog.V(1).Infof("not copying %q: too big", path)
 					return nil
 				}
