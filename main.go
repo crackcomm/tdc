@@ -147,7 +147,7 @@ func main() {
 				}
 
 				// Ignore if the file size is bigger than --size-limit (default: 1 megabyte)
-				if limit, ok := c.Generic("size-limit").(*cliutils.Megabytes); ok && uint64(info.Size()) > limit.Bytes() {
+				if limit, ok := c.Generic("size-limit").(*megabytes.Megabytes); ok && uint64(info.Size()) > limit.Bytes() {
 					glog.V(1).Infof("not copying %q: too big", path)
 					return nil
 				}
