@@ -15,7 +15,7 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/golang/glog"
 	"github.com/ryanuber/go-glob"
-	"github.com/tower-services/utils/cliutils"
+	"github.com/crackcomm/megabytes-flag"
 )
 
 func main() {
@@ -60,7 +60,7 @@ func main() {
 			Name:   "size-limit",
 			EnvVar: "TDC_FILE_SIZE_LIMIT",
 			Usage:  "template size limit",
-			Value:  &cliutils.Megabytes{Value: 1},
+			Value:  &megabytes.Megabytes{Value: 1},
 		},
 		cli.IntFlag{
 			Name:  "concurrency",
