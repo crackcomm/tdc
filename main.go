@@ -12,7 +12,7 @@ import (
 	"sync"
 	"text/template"
 
-	"github.com/codegangsta/cli"
+	"gopkg.in/urfave/cli.v1"
 	"github.com/golang/glog"
 	"github.com/ryanuber/go-glob"
 	"github.com/crackcomm/megabytes-flag"
