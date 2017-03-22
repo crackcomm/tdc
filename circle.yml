@@ -1,5 +1,11 @@
 
 machine:
+  environment:
+    GODIST: "go1.8.linux-amd64.tar.gz"
+  post:
+    - test -e $GODIST || curl -o $GODIST https://storage.googleapis.com/golang/$GODIST
+    - sudo rm -rf /usr/local/go
+    - sudo tar -C /usr/local -xzf $GODIST
   services:
     - docker
 
@@ -11,4 +17,3 @@ deployment:
       - make dist
       - docker build -t crackcomm/tdc:latest .
       - docker push crackcomm/tdc:latest
-      - make clean
