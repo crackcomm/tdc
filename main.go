@@ -12,10 +12,10 @@ import (
 	"sync"
 	"text/template"
 
-	"gopkg.in/urfave/cli.v1"
+	"github.com/crackcomm/megabytes-flag"
 	"github.com/golang/glog"
 	"github.com/ryanuber/go-glob"
-	"github.com/crackcomm/megabytes-flag"
+	"gopkg.in/urfave/cli.v1"
 )
 
 func main() {
@@ -93,7 +93,7 @@ func main() {
 		// Get template data from environment variables with specified prefix
 		data, err := getEnvData(c.String("prefix"))
 		if err != nil {
-			glog.Fatal(err)
+			glog.Warning(err)
 		}
 
 		// Compiler runtime compiles the templates
